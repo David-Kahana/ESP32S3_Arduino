@@ -17,7 +17,6 @@ const char logo[] =
   "/____/_/ /_/\\___/_/_/_/ /_/ /_/_/_/ /_/\\__,_/\\__/\\____/_/     \r\n"
   "\r\n\033[0;37m"
   "Visit on GitHub:\033[1;32m https://github.com/dani007200964/Shellminator\r\n\r\n"
-
   ;
 
 // We have to create an object from Commander class.
@@ -38,6 +37,10 @@ void setup()
     Serial.println("Program begin...");
     cb.init(&Serial);
     shell.attachCommander(&cb.commander);
+    // psram
+    cb.initPSRAM();
+    // file system
+    cb.initFileSystem();
     // Initialize shell object.
     shell.begin("arnold");
 }
