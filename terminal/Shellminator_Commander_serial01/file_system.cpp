@@ -9,13 +9,16 @@
 // You only need to format FFat the first time you run a test
 // #define FORMAT_FFAT false
 
-void FileSystem::initFileSystem()
+bool FileSystem::initFileSystem()
 {
     initialized = FFat.begin();
     if (!initialized)
     {
         Serial.printf("FFat mount failed, try formatting\r\n");
+        return false;
     }
+    FileSystemInterface::fs = this;
+    return true;
 }
 
 void FileSystem::formatFileSystem()
@@ -118,7 +121,47 @@ void FileSystem::removeDir(const char *dirname)
     }
 }
 
+FileSystem* FileSystemInterface::fs = nullptr;
 
+bool FileSystemInterface::common(Stream *response)
+{
+  if (fs)
+  {
+    return true;
+  }
+  response->printf("Error: File system not initialized\r\n");
+  return false;
+}
+
+void FileSystemInterface::formatFileSystem(char *args, Stream *response)
+{
+  if (common(response))
+  {
+    response->printf("Formatting file system\r\n");
+    fs->formatFileSystem();
+  }
+
+}
+
+void FileSystemInterface::spaceFileSystem(char *args, Stream *response)
+{
+
+}
+
+void FileSystemInterface::mkdirFileSystem(char *args, Stream *response)
+{
+
+}
+
+void FileSystemInterface::rmdirFileSystem(char *args, Stream *response)
+{
+
+}
+
+void FileSystemInterface::listFileSystem(char *args, Stream *response)
+{
+
+}
 
 // void readFile(fs::FS &fs, const char *path)
 // {
