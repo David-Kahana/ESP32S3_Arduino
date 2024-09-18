@@ -1,3 +1,4 @@
+#include "Logger.h"
 #include "file_system.h"
 #include "FS.h"
 #include "FFat.h"
