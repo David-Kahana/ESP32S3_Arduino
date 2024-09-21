@@ -1,4 +1,5 @@
 #include "BaseCommands.h"
+#include "Commander-API-Commands.hpp"
 
 class SimpleCommands : public BaseCommands
 {
@@ -18,14 +19,30 @@ class SimpleCommands : public BaseCommands
         Logger::log(response, "Chip ID: %d", chipId);
     };
 
-    bool addAllCommands()
+    bool addAllCommands() override 
     {
         bool ret = true;
         ret &= addCommand("id", "Show chip ID.", id_func);
-        //ret &= addCommand("space", "Display file system space.", spaceFileSystem);
-        //ret &= addCommand("mkdir", "Make directory.", mkdirFileSystem);
-        //ret &= addCommand("rmdir", "Remove directory.", rmdirFileSystem);
-        //ret &= addCommand("l", "List files in directory.", listFileSystem);
+        ret &= addCommand(API_ELEMENT_MILLIS);
+        ret &= addCommand(API_ELEMENT_MICROS);
+        ret &= addCommand(API_ELEMENT_UPTIME);
+        ret &= addCommand(API_ELEMENT_PINMODE);
+        ret &= addCommand(API_ELEMENT_DIGITALWRITE);
+        ret &= addCommand(API_ELEMENT_DIGITALREAD);
+        ret &= addCommand(API_ELEMENT_NEOFETCH);
+        ret &= addCommand(API_ELEMENT_REBOOT);
+     
+      // //API_ELEMENT_IPCONFIG,
+      // //API_ELEMENT_WIFISTAT,
+      // //API_ELEMENT_WIFISCAN,
+      // //API_ELEMENT_CONFIGTIME,
+      // //API_ELEMENT_DATETIME,
+      // API_ELEMENT_SIN,
+      // API_ELEMENT_COS,
+      // API_ELEMENT_ABS,
+      // API_ELEMENT_RANDOM,
+      // API_ELEMENT_NOT,
+
         return ret;
     };
 };
