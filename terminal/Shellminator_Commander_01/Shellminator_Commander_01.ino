@@ -1,6 +1,7 @@
 #include "Shellminator.hpp"
 #include "Shellminator-IO.hpp"
 #include "SimpleCommands.h"
+#include "FileSystem.h"
 
 Shellminator shell(&Serial);
 
@@ -16,6 +17,7 @@ const char logo[] =
   ;
 
 SimpleCommands sc;
+FileSystemInterface fs(&Serial);
 
 void setup()
 {
