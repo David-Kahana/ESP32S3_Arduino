@@ -3,7 +3,6 @@
 #include "esp32-hal-psram.h"
 #include "commands_basic.h"
 
-//cbptr = nullptr;
 bool CommandsBasic::psRamInitialized = false;
 
 CommandsBasic::CommandsBasic()
@@ -12,6 +11,7 @@ CommandsBasic::CommandsBasic()
 
 void CommandsBasic::init(Stream *debugChannel)
 {
+    Commander::API_t* apiFuncs;
     commander.attachDebugChannel(debugChannel);
     commander.attachTree(API_tree);
     commander.init();
