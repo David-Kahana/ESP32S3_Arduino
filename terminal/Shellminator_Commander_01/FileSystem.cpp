@@ -15,13 +15,7 @@ std::string FileSystem::lastError;
 bool FileSystem::initFileSystem()
 {
     initialized = FFat.begin();
-    if (!initialized)
-    {
-        //lastError = "initFileSystem failed, FFat mount failed, try formatting";
-        return false;
-    }
-    //lastError = "";
-    return true;
+    return isInitialized();
 }
 
 bool FileSystem::isInitialized()
@@ -54,151 +48,160 @@ bool FileSystem::formatFileSystem()
 bool FileSystem::spaceFileSystem(size_t& totalBytes, size_t& freeBytes)
 {
     if (!isInitialized()) return false;
-    
     totalBytes =  FFat.totalBytes();
     freeBytes = FFat.freeBytes();
     lastError = "";
     return true;
 }
 
-void FileSystem::listDir(const char *dirname, uint8_t levels)
+bool FileSystem::listDir(Stream* stream, const char *dirName, uint8_t levels)
 {
-    Serial.printf("Listing directory: %s\r\n", dirname);
-    File root = FFat.open(dirname);
+    if (!isInitialized()) return false;
+    stream->printf("Listing directory: %s\r\n", dirName);
+    File root = FFat.open(dirName);
     if (!root)
     {
-        Serial.printf("- failed to open directory\r\n");
-        return;
+        lastError = "listDir: failed to open directory";
+        return false;
     }
     if (!root.isDirectory())
     {
-        Serial.printf(" - not a directory\r\n");
-        return;
+        lastError = "listDir: not a directory";
+        return false;
     }
     File file = root.openNextFile();
+    if (!file)
+    {
+        stream->printf("Directory empty\r\n");
+    }
     while (file)
     {
         if (file.isDirectory())
         {
-            Serial.printf("  DIR : %s\r\n", file.name());
+            stream->printf("  DIR : %s\r\n", file.name());
             if (levels)
             {
-                listDir(file.path(), levels - 1);
+                listDir(stream, file.path(), levels - 1);
             }
         }
         else
         {
-            Serial.printf("  File: %s\t Size: %d \r\n", file.name(), file.size());
+            stream->printf("  File: %s\t Size: %d \r\n", file.name(), file.size());
         }
         file = root.openNextFile();
     }
+    lastError = "";
+    return true;
 }
 
-void FileSystem::makeDir(const char *dirname)
+bool FileSystem::makeDir(const char *dirName)
 {
-  char* directory = new char[strlen(dirname) + 1];
-  directory[0] = '/';
-  strcpy(directory+1,dirname);
-  if (initialized)
+    if (!isInitialized()) return false;
+    std::string directory = "/";
+    directory += dirName;
+    //char* directory = new char[strlen(dirName) + 1];
+    //directory[0] = '/';
+    //strcpy(directory + 1, dirName);
+    if (!FFat.mkdir(directory.c_str()))
     {
-        if (FFat.mkdir(directory))
-        {
-            Serial.printf("Directory created: %s\r\n", dirname);
-        }
-        else
-        {
-            Serial.printf("Failed to create directory: %s\r\n", dirname);
-        }
+        lastError = "makeDir: Failed to create directory: ";
+        lastError += dirName;
+        return false;
     }
-    else
-    {
-        Serial.printf("FFat not initialized\r\n");
-    }
+    lastError = "";
+    return true;
 }
 
-void FileSystem::removeDir(const char *dirname)
+bool FileSystem::removeDir(const char *dirName)
 {
-  char* directory = new char[strlen(dirname) + 1];
-  directory[0] = '/';
-  strcpy(directory+1,dirname);
-  if (initialized)
+    if (!isInitialized()) return false;
+    std::string directory = "/";
+    directory += dirName;
+    //char* directory = new char[strlen(dirName) + 1];
+    //directory[0] = '/';
+    //strcpy(directory + 1, dirName);
+    if (!FFat.rmdir(directory.c_str()))
     {
-        if (FFat.rmdir(directory))
-        {
-            Serial.printf("Directory removed: %s\r\n", dirname);
-        }
-        else
-        {
-            Serial.printf("Failed to remove directory: %s\r\n", dirname);
-        }
+        lastError = "removeDir: Failed to remove directory: ";
+        lastError += dirName;
+        return false;
     }
-    else
-    {
-        Serial.printf("FFat not initialized\r\n");
-    }
+    lastError = "";
+    return true;
 }
 
 //static 
 FileSystem FileSystemInterface::fs;
 
 //static
-bool FileSystemInterface::common(Stream *response)
-{
-  if (fs.isInitialized())
-  {
-      return true;
-  }
-  Logger::log(response, ERR, 1, "File system not initialized");
-  return false;
-}
-
-//static
 bool FileSystemInterface::checkResult(bool result,  Stream *response)
 {
     if (!result)
     {
-        Logger::log(response, INF, 1, fs.getLastError());
+        Logger::log(response, ERR, 1, fs.getLastError());
         return false;
     }
     return true;
 }
 
+//static
 void FileSystemInterface::formatFileSystem(char *args, Stream *response)
 {
-    if (common(response))
+    Logger::log(response, INF, 1, "Formatting file system");
+    if (checkResult(fs.formatFileSystem(), response))
     {
-        Logger::log(response, INF, 1, "Formatting file system");
-        if (checkResult(fs.formatFileSystem(), response))
-        {
-            Logger::log(response, INF, 1, "Formatting done");
-        }
+        Logger::log(response, INF, 1, "Formatting done");
     }
 }
 
+//static
 void FileSystemInterface::spaceFileSystem(char *args, Stream *response)
 {
     size_t totalBytes = 0;
     size_t freeBytes = 0;
     if (checkResult(fs.spaceFileSystem(totalBytes, freeBytes), response))
     {
-        Logger::log(response, INF, 1, "Total space: %10u", totalBytes);
-        Logger::log(response, INF, 1, "Free space: %10u", freeBytes);
+        Logger::log(response, INF, 1, "Total space:\t%10u", totalBytes);
+        Logger::log(response, INF, 1, "Free space:\t%10u", freeBytes);
     }
 }
 
-// void FileSystemInterface::mkdirFileSystem(char *args, Stream *response)
-// {
+//static
+void FileSystemInterface::mkdirFileSystem(char *args, Stream *response)
+{
+    int argResult = 0;
+    char dirName[64];
+    memset(dirName, 0, 64);
+    argResult = sscanf(args, "%s", dirName);
+    // We have to check that we parsed successfully directory name
+    if (argResult != 1)
+    {
+        Logger::log(response, ERR, 1, "mkdirFileSystem: Argument error! one string required (no spaces)");
+        return;
+    }
+    checkResult(fs.makeDir(dirName), response);
+}
 
-// }
+//static
+void FileSystemInterface::rmdirFileSystem(char *args, Stream *response)
+{
+    int argResult = 0;
+    char dirName[64];
+    memset(dirName, 0, 64);
+    argResult = sscanf(args, "%s", dirName);
+    // We have to check that we parsed successfully directory name
+    if (argResult != 1)
+    {
+        Logger::log(response, ERR, 1, "rmdirFileSystem: Argument error! one string required (no spaces)");
+        return;
+    }
+    checkResult(fs.removeDir(dirName), response);
+}
 
-// void FileSystemInterface::rmdirFileSystem(char *args, Stream *response)
-// {
-
-// }
-
+//static
 void FileSystemInterface::listFileSystem(char *args, Stream *response)
 {
-    fs.listDir("/",4);
+    checkResult(fs.listDir(response, "/", 4), response);
 }
 
 // void readFile(fs::FS &fs, const char *path)

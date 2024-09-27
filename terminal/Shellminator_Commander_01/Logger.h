@@ -80,6 +80,7 @@ enum LogType
 class Logger
 {
   public:
+    inline static std::string newMsg;
     static inline std::vector<std::string> pres = { "\033[0m",                        // none
                                                     "\033[0;32mDEBUG: \033[0m",       // green
                                                     "\033[0;36mINFO: \033[0m",        // white
@@ -89,6 +90,7 @@ class Logger
                                                     "\033[0;31mERROR: \033[0m",       // red
                                                     "\033[0;31mCRITICAL: \033[0m" };  // red
 
+    
     static void severityModify(uint8_t severity, std::string& pre)
     {
         switch (severity)
@@ -107,9 +109,21 @@ class Logger
         }
     }
 
+    static void log(Stream* stream, LogType type, uint8_t severity, const char* msg, ...)
+    {
+        newMsg = pres[(int)type];
+        severityModify(severity, newMsg);
+        newMsg += msg;
+        newMsg += "\r\n";
+        va_list args;
+        va_start(args, newMsg.c_str());
+        stream->vprintf(newMsg.c_str(), args);
+        va_end(args);
+    }
+
     static void log(LogType type, uint8_t severity, const char* msg, ...)
     {
-        std::string newMsg = pres[(int)type];
+        newMsg = pres[(int)type];
         severityModify(severity, newMsg);
         newMsg += msg;
         newMsg += "\r\n";
@@ -123,7 +137,7 @@ class Logger
 
     static void log(const char* msg, ...)
     {
-        std::string newMsg = pres[0];
+        newMsg = pres[0];
         newMsg += msg;
         newMsg += "\r\n";
         va_list args;
@@ -132,23 +146,9 @@ class Logger
         va_end(args);
     }
 
-    static void log(Stream* stream, LogType type, uint8_t severity, const char* msg, ...)
-    {
-        std::string newMsg = pres[(int)type];
-        severityModify(severity, newMsg);
-        newMsg += msg;
-        newMsg += "\r\n";
-
-        //printf("%s", newMsg.c_str());
-        va_list args;
-        va_start(args, newMsg.c_str());
-        stream->vprintf(newMsg.c_str(), args);
-        va_end(args);
-    }
-
     static void log(Stream* stream, const char* msg, ...)
     {
-        std::string newMsg = pres[0];      
+        newMsg = pres[0];      
         newMsg += msg;
         newMsg += "\r\n";
         va_list args;
