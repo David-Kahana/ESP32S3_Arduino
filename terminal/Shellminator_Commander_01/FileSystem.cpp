@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "FileSystem.h"
 #include "FS.h"
 #include "FFat.h"
@@ -181,16 +182,6 @@ void FileSystemInterface::spaceFileSystem(char *args, Stream *response)
 //static
 void FileSystemInterface::mkdirFileSystem(char *args, Stream *response)
 {
-    //int argResult = 0;
-    //char dirName[64];
-    //memset(dirName, 0, 64);
-    //argResult = sscanf(args, "%s", dirName);
-    // We have to check that we parsed successfully directory name
-    //if (argResult != 1)
-    //{
-    //    Logger::log(response, ERR, 1, "mkdirFileSystem: Argument error! one string required (no spaces)");
-    //    return;
-    //}
     if (!checkForPathName(args, response)) return;
     checkResult(fs.makeDir(pathStr), response);
 }
@@ -198,23 +189,18 @@ void FileSystemInterface::mkdirFileSystem(char *args, Stream *response)
 //static
 void FileSystemInterface::rmdirFileSystem(char *args, Stream *response)
 {
-    int argResult = 0;
-    char dirName[64];
-    memset(dirName, 0, 64);
-    argResult = sscanf(args, "%s", dirName);
-    // We have to check that we parsed successfully directory name
-    if (argResult != 1)
-    {
-        Logger::log(response, ERR, 1, "rmdirFileSystem: Argument error! one string required (no spaces)");
-        return;
-    }
-    checkResult(fs.removeDir(dirName), response);
+    if (!checkForPathName(args, response)) return;
+    checkResult(fs.removeDir(pathStr), response);
 }
 
 //static
 void FileSystemInterface::listFileSystem(char *args, Stream *response)
 {
-    checkResult(fs.listDir(response, "/", 4), response);
+    memset(pathStr, 0, MaxPathSize);
+    pathStr[0] = '/';
+    uint16_t levels = 0;
+    sscanf(args, "%s%u", pathStr, &levels);
+    checkResult(fs.listDir(response, pathStr, levels), response);
 }
 
 // void readFile(fs::FS &fs, const char *path)
