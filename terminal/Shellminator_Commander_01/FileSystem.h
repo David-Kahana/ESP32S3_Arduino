@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "BaseCommands.h"
 
 class FileSystem
@@ -50,7 +51,10 @@ class FileSystemInterface : public BaseCommands
     static FileSystem fs;
 
     private:
-    static bool checkResult(bool result,  Stream *response);
+    static bool checkResult(bool result, Stream *response);
+    static bool checkForPathName(char* args, Stream *response);
+    inline static const uint16_t MaxPathSize = 64; 
+    static char pathStr[MaxPathSize];
 };
 
 

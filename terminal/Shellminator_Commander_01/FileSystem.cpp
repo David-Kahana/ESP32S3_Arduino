@@ -34,15 +34,17 @@ const char* FileSystem::getLastError()
 
 bool FileSystem::formatFileSystem()
 {
+    if (initialized) FFat.end();
+    delay(1);
+    initialized = false;
     formatted = FFat.format();
     if (!formatted)
     {
         lastError = "formatFileSystem failed, FFat format failed";
-        initialized = false;
         return false;
     }
     lastError = "";
-    return true;
+    return initFileSystem();
 }
     
 bool FileSystem::spaceFileSystem(size_t& totalBytes, size_t& freeBytes)
@@ -99,9 +101,6 @@ bool FileSystem::makeDir(const char *dirName)
     if (!isInitialized()) return false;
     std::string directory = "/";
     directory += dirName;
-    //char* directory = new char[strlen(dirName) + 1];
-    //directory[0] = '/';
-    //strcpy(directory + 1, dirName);
     if (!FFat.mkdir(directory.c_str()))
     {
         lastError = "makeDir: Failed to create directory: ";
@@ -117,9 +116,6 @@ bool FileSystem::removeDir(const char *dirName)
     if (!isInitialized()) return false;
     std::string directory = "/";
     directory += dirName;
-    //char* directory = new char[strlen(dirName) + 1];
-    //directory[0] = '/';
-    //strcpy(directory + 1, dirName);
     if (!FFat.rmdir(directory.c_str()))
     {
         lastError = "removeDir: Failed to remove directory: ";
@@ -132,6 +128,8 @@ bool FileSystem::removeDir(const char *dirName)
 
 //static 
 FileSystem FileSystemInterface::fs;
+//static 
+char FileSystemInterface::pathStr[MaxPathSize];
 
 //static
 bool FileSystemInterface::checkResult(bool result,  Stream *response)
@@ -139,6 +137,20 @@ bool FileSystemInterface::checkResult(bool result,  Stream *response)
     if (!result)
     {
         Logger::log(response, ERR, 1, fs.getLastError());
+        return false;
+    }
+    return true;
+}
+
+//static
+bool FileSystemInterface::checkForPathName(char* args, Stream *response)
+{
+    memset(pathStr, 0, MaxPathSize);
+    int argResult = sscanf(args, "%s", pathStr);
+    // We have to check that we parsed successfully directory name
+    if (argResult != 1)
+    {
+        Logger::log(response, ERR, 1, "checkForPathName: Argument error! one string required (no spaces)");
         return false;
     }
     return true;
@@ -169,17 +181,18 @@ void FileSystemInterface::spaceFileSystem(char *args, Stream *response)
 //static
 void FileSystemInterface::mkdirFileSystem(char *args, Stream *response)
 {
-    int argResult = 0;
-    char dirName[64];
-    memset(dirName, 0, 64);
-    argResult = sscanf(args, "%s", dirName);
+    //int argResult = 0;
+    //char dirName[64];
+    //memset(dirName, 0, 64);
+    //argResult = sscanf(args, "%s", dirName);
     // We have to check that we parsed successfully directory name
-    if (argResult != 1)
-    {
-        Logger::log(response, ERR, 1, "mkdirFileSystem: Argument error! one string required (no spaces)");
-        return;
-    }
-    checkResult(fs.makeDir(dirName), response);
+    //if (argResult != 1)
+    //{
+    //    Logger::log(response, ERR, 1, "mkdirFileSystem: Argument error! one string required (no spaces)");
+    //    return;
+    //}
+    if (!checkForPathName(args, response)) return;
+    checkResult(fs.makeDir(pathStr), response);
 }
 
 //static
