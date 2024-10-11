@@ -127,6 +127,30 @@ bool FileSystem::removeDir(const char *dirName)
     return true;
 }
 
+bool writeFile(const char *path, const char *message)
+{
+    if (!isInitialized()) return false;
+    //Serial.printf("Writing file: %s\r\n", path);
+
+    File file = fs.open(path, FILE_WRITE);
+    if (!file)
+    {
+        lastError = "writeFile: Failed to open file for writing: ";
+        lastError += path;
+        return false;
+    }
+    if (!file.print(message))
+    {
+        lastError = "writeFile: Failed to write: ";
+        lastError += path;
+        return false;
+    }
+    lastError = "";
+    file.close();
+    return true;
+}
+
+
 //static 
 FileSystem FileSystemInterface::fs;
 //static 
@@ -203,6 +227,12 @@ void FileSystemInterface::listFileSystem(char *args, Stream *response)
     checkResult(fs.listDir(response, pathStr, levels), response);
 }
 
+//static 
+void FileSystemInterface::writeFileSystem(char *args, Stream *response)
+{
+  
+}
+
 // void readFile(fs::FS &fs, const char *path)
 // {
 //     Serial.printf("Reading file: %s\r\n", path);
@@ -222,26 +252,6 @@ void FileSystemInterface::listFileSystem(char *args, Stream *response)
 //     file.close();
 // }
 
-// void writeFile(fs::FS &fs, const char *path, const char *message)
-// {
-//     Serial.printf("Writing file: %s\r\n", path);
-
-//     File file = fs.open(path, FILE_WRITE);
-//     if (!file)
-//     {
-//         Serial.println("- failed to open file for writing");
-//         return;
-//     }
-//     if (file.print(message))
-//     {
-//         Serial.println("- file written");
-//     }
-//     else
-//     {
-//         Serial.println("- write failed");
-//     }
-//     file.close();
-// }
 
 // void appendFile(fs::FS &fs, const char *path, const char *message)
 // {

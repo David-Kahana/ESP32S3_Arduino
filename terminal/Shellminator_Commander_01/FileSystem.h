@@ -10,6 +10,7 @@ class FileSystem
   bool listDir(Stream* stream, const char *dirName, uint8_t levels);
   bool makeDir(const char *dirName);
   bool removeDir(const char *dirName);
+  bool writeFile(const char *path, const char *message);
   bool isInitialized();
   const char* getLastError();
 
@@ -36,6 +37,7 @@ class FileSystemInterface : public BaseCommands
     static void mkdirFileSystem(char *args, Stream *response);
     static void rmdirFileSystem(char *args, Stream *response);
     static void listFileSystem(char *args, Stream *response);
+    static void writeFileSystem(char *args, Stream *response);
 
     bool addAllCommands() override 
     {
@@ -45,6 +47,7 @@ class FileSystemInterface : public BaseCommands
         ret &= addCommand("mkdir", "Make directory.", mkdirFileSystem);
         ret &= addCommand("rmdir", "Remove directory.", rmdirFileSystem);
         ret &= addCommand("l", "List files in directory.", listFileSystem);
+        ret &= addCommand("w", "Write to file, enter file path and content.", writeFileSystem);
         return ret;
     };
 
@@ -53,7 +56,7 @@ class FileSystemInterface : public BaseCommands
     private:
     static bool checkResult(bool result, Stream *response);
     static bool checkForPathName(char* args, Stream *response);
-    inline static const uint16_t MaxPathSize = 64; 
+    inline static uint16_t MaxPathSize = 64; 
     static char pathStr[MaxPathSize];
 };
 
