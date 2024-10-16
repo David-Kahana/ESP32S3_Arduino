@@ -100,9 +100,7 @@ bool FileSystem::listDir(Stream* stream, const char *dirName, uint8_t levels)
 bool FileSystem::makeDir(const char *dirName)
 {
     if (!isInitialized()) return false;
-    std::string directory = "/";
-    directory += dirName;
-    if (!FFat.mkdir(directory.c_str()))
+    if (!FFat.mkdir(dirName))
     {
         lastError = "makeDir: Failed to create directory: ";
         lastError += dirName;
@@ -115,9 +113,7 @@ bool FileSystem::makeDir(const char *dirName)
 bool FileSystem::removeDir(const char *dirName)
 {
     if (!isInitialized()) return false;
-    std::string directory = "/";
-    directory += dirName;
-    if (!FFat.rmdir(directory.c_str()))
+    if (!FFat.rmdir(dirName))
     {
         lastError = "removeDir: Failed to remove directory: ";
         lastError += dirName;
@@ -127,12 +123,12 @@ bool FileSystem::removeDir(const char *dirName)
     return true;
 }
 
-bool writeFile(const char *path, const char *message)
+bool FileSystem::writeFile(const char *path, const char *message)
 {
     if (!isInitialized()) return false;
     //Serial.printf("Writing file: %s\r\n", path);
 
-    File file = fs.open(path, FILE_WRITE);
+    File file = FFat.open(path, FILE_WRITE);
     if (!file)
     {
         lastError = "writeFile: Failed to open file for writing: ";
@@ -147,6 +143,36 @@ bool writeFile(const char *path, const char *message)
     }
     lastError = "";
     file.close();
+    return true;
+}
+
+bool FileSystem::readFile(Stream* stream, const char *path)
+{
+    if (!isInitialized()) return false;
+    //Serial.printf("Reading file: %s\r\n", path);
+
+    File file = FFat.open(path);
+
+    if (!file)
+    {
+        lastError = "readFile: Failed to open file for reading: ";
+        lastError += path;
+        return false;
+    }
+
+    if (file.isDirectory())
+    {
+        lastError = "readFile: file is a directory: ";
+        lastError += path;
+        return false;
+    }
+
+    while (file.available())
+    {
+        stream->write(file.read());
+    }
+    file.close();
+
     return true;
 }
 
@@ -171,7 +197,8 @@ bool FileSystemInterface::checkResult(bool result,  Stream *response)
 bool FileSystemInterface::checkForPathName(char* args, Stream *response)
 {
     memset(pathStr, 0, MaxPathSize);
-    int argResult = sscanf(args, "%s", pathStr);
+    pathStr[0] = '/';
+    int argResult = sscanf(args, "%s", pathStr+1);
     // We have to check that we parsed successfully directory name
     if (argResult != 1)
     {
@@ -223,35 +250,24 @@ void FileSystemInterface::listFileSystem(char *args, Stream *response)
     memset(pathStr, 0, MaxPathSize);
     pathStr[0] = '/';
     uint16_t levels = 0;
-    sscanf(args, "%s%u", pathStr, &levels);
+    sscanf(args, "%s%u", pathStr+1, &levels);
     checkResult(fs.listDir(response, pathStr, levels), response);
 }
 
 //static 
 void FileSystemInterface::writeFileSystem(char *args, Stream *response)
 {
-  
+    if (!checkForPathName(args, response)) return;
+    char* msg = nullptr;
+    msg = strchr(args, ' ');
+    checkResult(fs.writeFile(pathStr, msg + 1), response);
 }
 
-// void readFile(fs::FS &fs, const char *path)
-// {
-//     Serial.printf("Reading file: %s\r\n", path);
-
-//     File file = fs.open(path);
-//     if (!file || file.isDirectory())
-//     {
-//         Serial.println("- failed to open file for reading");
-//         return;
-//     }
-
-//     Serial.println("- read from file:");
-//     while (file.available())
-//     {
-//         Serial.write(file.read());
-//     }
-//     file.close();
-// }
-
+void FileSystemInterface::readFileSystem(char *args, Stream *response)
+{
+    if (!checkForPathName(args, response)) return;
+    checkResult(fs.readFile(response, pathStr), response);
+}
 
 // void appendFile(fs::FS &fs, const char *path, const char *message)
 // {
