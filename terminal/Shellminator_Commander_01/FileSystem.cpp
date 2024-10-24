@@ -126,8 +126,6 @@ bool FileSystem::removeDir(const char *dirName)
 bool FileSystem::writeFile(const char *path, const char *message)
 {
     if (!isInitialized()) return false;
-    //Serial.printf("Writing file: %s\r\n", path);
-
     File file = FFat.open(path, FILE_WRITE);
     if (!file)
     {
@@ -146,36 +144,79 @@ bool FileSystem::writeFile(const char *path, const char *message)
     return true;
 }
 
+bool FileSystem::appendFile(const char *path, const char *message)
+{
+    if (!isInitialized()) return false;
+    File file = FFat.open(path, FILE_APPEND);
+    if (!file)
+    {
+        lastError = "appendFile: Failed to open file for appending: ";
+        lastError += path;
+        return false;
+    }
+    if (!file.print(message))
+    {
+        lastError = "appendFile: Failed to append: ";
+        lastError += path;
+        return false;
+    }
+    lastError = "";
+    file.close();
+    return true;
+}
+
 bool FileSystem::readFile(Stream* stream, const char *path)
 {
     if (!isInitialized()) return false;
-    //Serial.printf("Reading file: %s\r\n", path);
-
     File file = FFat.open(path);
-
     if (!file)
     {
         lastError = "readFile: Failed to open file for reading: ";
         lastError += path;
         return false;
     }
-
     if (file.isDirectory())
     {
         lastError = "readFile: file is a directory: ";
         lastError += path;
         return false;
     }
-
     while (file.available())
     {
         stream->write(file.read());
     }
     file.close();
-
     return true;
 }
 
+bool FileSystem::renameFile(const char *path1, const char *path2)
+{
+    if (!isInitialized()) return false;
+    
+    if (!FFat.rename(path1, path2))
+    {
+        lastError = "renameFile: Failed to rename file from: ";
+        lastError += path1;
+        lastError += " to: ";
+        lastError += path2;
+        return false;
+    }
+    lastError = "";
+    return true;
+}
+
+bool FileSystem::deleteFile(const char *path)
+{
+    if (!isInitialized()) return false;
+    if (!FFat.remove(path))
+    {
+        lastError = "deleteFile: Failed to delete file: ";
+        lastError += path;
+        return false;
+    }
+    lastError = "";
+    return true;
+}
 
 //static 
 FileSystem FileSystemInterface::fs;
@@ -263,146 +304,39 @@ void FileSystemInterface::writeFileSystem(char *args, Stream *response)
     checkResult(fs.writeFile(pathStr, msg + 1), response);
 }
 
+//static 
+void FileSystemInterface::appendFileSystem(char *args, Stream *response)
+{
+    if (!checkForPathName(args, response)) return;
+    char* msg = nullptr;
+    msg = strchr(args, ' ');
+    checkResult(fs.appendFile(pathStr, msg + 1), response);
+}
+
+//static 
 void FileSystemInterface::readFileSystem(char *args, Stream *response)
 {
     if (!checkForPathName(args, response)) return;
     checkResult(fs.readFile(response, pathStr), response);
 }
 
-// void appendFile(fs::FS &fs, const char *path, const char *message)
-// {
-//     Serial.printf("Appending to file: %s\r\n", path);
+//static 
+void FileSystemInterface::renameFileSystem(char *args, Stream *response)
+{
+    if (!checkForPathName(args, response)) return;
+    char* newName = strchr(args, ' ');
+    if (newName == nullptr)
+    {
+        Logger::log(response, ERR, 1, "checkForPathName: Argument error! second string required (no spaces)");
+        return;
+    }
+    newName[0] = '/';
+    checkResult(fs.renameFile(pathStr, newName), response);
+}
 
-//     File file = fs.open(path, FILE_APPEND);
-//     if (!file)
-//     {
-//         Serial.println("- failed to open file for appending");
-//         return;
-//     }
-//     if (file.print(message))
-//     {
-//         Serial.println("- message appended");
-//     }
-//     else
-//     {
-//         Serial.println("- append failed");
-//     }
-//     file.close();
-// }
-
-// void renameFile(fs::FS &fs, const char *path1, const char *path2)
-// {
-//     Serial.printf("Renaming file %s to %s\r\n", path1, path2);
-//     if (fs.rename(path1, path2))
-//     {
-//         Serial.println("- file renamed");
-//     }
-//     else
-//     {
-//         Serial.println("- rename failed");
-//     }
-// }
-
-// void deleteFile(fs::FS &fs, const char *path)
-// {
-//     Serial.printf("Deleting file: %s\r\n", path);
-//     if (fs.remove(path))
-//     {
-//         Serial.println("- file deleted");
-//     }
-//     else
-//     {
-//         Serial.println("- delete failed");
-//     }
-// }
-
-// void testFileIO(fs::FS &fs, const char *path)
-// {
-//     Serial.printf("Testing file I/O with %s\r\n", path);
-
-//     static uint8_t buf[512];
-//     size_t len = 0;
-//     File file = fs.open(path, FILE_WRITE);
-//     if (!file)
-//     {
-//         Serial.println("- failed to open file for writing");
-//         return;
-//     }
-
-//     size_t i;
-//     Serial.print("- writing");
-//     uint32_t start = millis();
-//     for (i = 0; i < 2048; i++)
-//     {
-//         if ((i & 0x001F) == 0x001F)
-//         {
-//             Serial.print(".");
-//         }
-//         file.write(buf, 512);
-//     }
-//     Serial.println("");
-//     uint32_t end = millis() - start;
-//     Serial.printf(" - %u bytes written in %u ms\r\n", 2048 * 512, end);
-//     file.close();
-
-//     file = fs.open(path);
-//     start = millis();
-//     end = start;
-//     i = 0;
-//     if (file && !file.isDirectory())
-//     {
-//         len = file.size();
-//         size_t flen = len;
-//         start = millis();
-//         Serial.print("- reading");
-//         while (len)
-//         {
-//             size_t toRead = len;
-//             if (toRead > 512)
-//             {
-//                 toRead = 512;
-//             }
-//             file.read(buf, toRead);
-//             if ((i++ & 0x001F) == 0x001F)
-//             {
-//                 Serial.print(".");
-//             }
-//             len -= toRead;
-//         }
-//         Serial.println("");
-//         end = millis() - start;
-//         Serial.printf("- %u bytes read in %u ms\r\n", flen, end);
-//         file.close();
-//     }
-//     else
-//     {
-//         Serial.println("- failed to open file for reading");
-//     }
-// }
-
-// void setup()
-// {
-//     Serial.begin(115200);
-//     Serial.setDebugOutput(true);
-//     if (FORMAT_FFAT) FFat.format();
-//     if (!FFat.begin())
-//     {
-//         Serial.println("FFat Mount Failed");
-//         return;
-//     }
-
-//     Serial.printf("Total space: %10u\n", FFat.totalBytes());
-//     Serial.printf("Free space: %10u\n", FFat.freeBytes());
-//     listDir(FFat, "/", 0);
-//     writeFile(FFat, "/hello.txt", "Hello ");
-//     appendFile(FFat, "/hello.txt", "World!\r\n");
-//     readFile(FFat, "/hello.txt");
-//     renameFile(FFat, "/hello.txt", "/foo.txt");
-//     readFile(FFat, "/foo.txt");
-//     deleteFile(FFat, "/foo.txt");
-//     testFileIO(FFat, "/test.txt");
-//     Serial.printf("Free space: %10u\n", FFat.freeBytes());
-//     deleteFile(FFat, "/test.txt");
-//     Serial.println("Test complete");
-// }
-
+//static 
+void FileSystemInterface::deleteFileSystem(char *args, Stream *response)
+{
+    if (!checkForPathName(args, response)) return;
+    checkResult(fs.deleteFile(pathStr), response);
+}
