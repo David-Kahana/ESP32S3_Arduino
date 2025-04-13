@@ -230,7 +230,11 @@ void FileSystemInterface::listFileSystem(char *args, Stream *response)
 //static 
 void FileSystemInterface::writeFileSystem(char *args, Stream *response)
 {
-  
+    memset(pathStr, 0, MaxPathSize);
+    pathStr[0] = '/';
+    uint16_t levels = 0;
+    sscanf(args, "%s%u", pathStr, &levels);
+    checkResult(fs.listDir(response, pathStr, levels), response);
 }
 
 // void readFile(fs::FS &fs, const char *path)
