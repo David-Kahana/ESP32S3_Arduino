@@ -11,6 +11,10 @@ class FileSystem
   bool makeDir(const char *dirName);
   bool removeDir(const char *dirName);
   bool writeFile(const char *path, const char *message);
+  bool appendFile(const char *path, const char *message);
+  bool readFile(Stream* stream, const char *path);
+  bool renameFile(const char *path1, const char *path2);
+  bool deleteFile(const char *path);
   bool isInitialized();
   const char* getLastError();
 
@@ -38,16 +42,26 @@ class FileSystemInterface : public BaseCommands
     static void rmdirFileSystem(char *args, Stream *response);
     static void listFileSystem(char *args, Stream *response);
     static void writeFileSystem(char *args, Stream *response);
+    static void appendFileSystem(char *args, Stream *response);
+    static void readFileSystem(char *args, Stream *response);
+    static void renameFileSystem(char *args, Stream *response);
+    static void deleteFileSystem(char *args, Stream *response);
 
     bool addAllCommands() override 
     {
         bool ret = true;
+
         ret &= addCommand("format", "Format file system.", formatFileSystem);
         ret &= addCommand("space", "Display file system space.", spaceFileSystem);
         ret &= addCommand("mkdir", "Make directory.", mkdirFileSystem);
         ret &= addCommand("rmdir", "Remove directory.", rmdirFileSystem);
         ret &= addCommand("l", "List files in directory.", listFileSystem);
         ret &= addCommand("w", "Write to file, enter file path and content.", writeFileSystem);
+        ret &= addCommand("a", "Append to a file, enter file path and content.", appendFileSystem);
+        ret &= addCommand("r", "Read from a file, enter file path.", readFileSystem);
+        ret &= addCommand("ren", "Rename file, enter file path and new file name.", renameFileSystem);
+        ret &= addCommand("del", "Delete file, enter file path.", deleteFileSystem);
+        
         return ret;
     };
 
@@ -56,7 +70,7 @@ class FileSystemInterface : public BaseCommands
     private:
     static bool checkResult(bool result, Stream *response);
     static bool checkForPathName(char* args, Stream *response);
-    inline static uint16_t MaxPathSize = 64; 
+    inline static const uint16_t MaxPathSize = 64; 
     static char pathStr[MaxPathSize];
 };
 
