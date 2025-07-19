@@ -37,6 +37,8 @@ void loop(void)
   display.drawPixel(0, 0, TFT_WHITE);
   delay(500);
   display.drawPixel(display.width()-1, 0, TFT_WHITE);
+  display.drawPixel(display.width()-2, 1, TFT_WHITE);
+  display.drawPixel(display.width()-3, 2, TFT_WHITE);
   delay(500);
   display.drawPixel(0, display.height()-1, TFT_WHITE);
   delay(500);
